@@ -1,5 +1,7 @@
 import os
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 KAKAO_ACCESS_TOKEN = os.environ.get("KAKAO_ACCESS_TOKEN")
 
@@ -36,16 +38,20 @@ def check_boo_woo_ticket():
     TARGET_URL = "https://l-tike.com/bw-ticket/ghibli/ghibli-park/"
     TARGET_DATE = "20261003"
     
-    # 일본 현지 브라우저 헤더 위장 (봇 차단 우회)
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Accept-Language": "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Referer": "https://l-tike.com/"
     }
+
+    session = requests.Session()
+    retries = Retry(total=2, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+    session.mount('https://', HTTPAdapter(max_retries=retries))
 
     try:
         print("[진행 중] Boo-Woo 예매 사이트 접속 중...")
-        response = requests.get(TARGET_URL, headers=headers, timeout=15)
+        response = session.get(TARGET_URL, headers=headers, timeout=30)
         response.raise_for_status()
         
         content = response.text
@@ -60,6 +66,8 @@ def check_boo_woo_ticket():
         else:
             print("[알림] 2026-10-03 잔여 티켓이 없습니다. (다음 스케줄 대기)")
 
+    except requests.exceptions.Timeout:
+        print("[안내] 서버 응답 시간이 초과되었습니다. (방화벽 지연 방어 - 다음 스케줄에서 자동으로 재시도합니다.)")
     except Exception as e:
         print(f"[오류 발생] 크롤링 도중 예외 발생: {e}")
 
