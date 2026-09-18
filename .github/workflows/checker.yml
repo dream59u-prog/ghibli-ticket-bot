@@ -38,7 +38,6 @@ jobs:
       with:
         name: lticket-debug
         path: |
-          lticket_debug.png
-          lticket_debug.html
-          lticket_error.png
+          lticket_test.png
+          lticket_test.html
         if-no-files-found: ignore
