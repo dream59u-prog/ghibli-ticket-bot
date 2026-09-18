@@ -51,7 +51,7 @@ def check_boo_woo_ticket():
         try:
             print("[진행 중] Boo-Woo 예매 사이트 접속 중...")
             # networkidle 옵션 대신 domcontentloaded 사용으로 튕김 방지
-            page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=60000)
+            page.goto(TARGET_URL, wait_until="commit", timeout=60000)
 
             page.wait_for_timeout(3000)
             
