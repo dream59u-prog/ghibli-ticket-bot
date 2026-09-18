@@ -1,99 +1,91 @@
-import os
-import time
+import requests
 from playwright.sync_api import sync_playwright
 
-KAKAO_ACCESS_TOKEN = os.environ.get("KAKAO_ACCESS_TOKEN")
 
-TARGET_URL = "https://l-tike.com/bw-ticket/ghibli/ghibli-park/"
+URL = "https://l-tike.com/bw-ticket/ghibli/ghibli-park/"
 
 
-def test_lticket():
+print("=" * 60)
+print("TEST 1 : requests")
+print("=" * 60)
 
-    print("[진행 중] Playwright로 Boo-Woo 접속 테스트")
-
-    with sync_playwright() as p:
-
-        browser = p.chromium.launch(
-            headless=True,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--no-sandbox",
-                "--disable-dev-shm-usage"
-            ]
-        )
-
-        context = browser.new_context(
-            locale="ja-JP",
-            timezone_id="Asia/Tokyo",
-            viewport={
-                "width": 1366,
-                "height": 900
-            },
-            user_agent=(
+try:
+    r = requests.get(
+        URL,
+        headers={
+            "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/140.0.0.0 Safari/537.36"
             )
+        },
+        timeout=20
+    )
+
+    print("STATUS:", r.status_code)
+    print("URL:", r.url)
+    print("LENGTH:", len(r.content))
+
+except Exception as e:
+    print("REQUESTS ERROR:", repr(e))
+
+
+print()
+print("=" * 60)
+print("TEST 2 : Playwright Chromium")
+print("=" * 60)
+
+with sync_playwright() as p:
+
+    browser = p.chromium.launch(
+        headless=True,
+        args=[
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-http2",
+        ]
+    )
+
+    page = browser.new_page()
+
+    try:
+
+        response = page.goto(
+            URL,
+            wait_until="commit",
+            timeout=60000
         )
 
-        page = context.new_page()
+        print(
+            "STATUS:",
+            response.status if response else "NONE"
+        )
 
-        try:
+        print("URL:", page.url)
 
-            print("[1] 페이지 접속 중...")
+        page.wait_for_timeout(5000)
 
-            response = page.goto(
-                TARGET_URL,
-                wait_until="domcontentloaded",
-                timeout=60000
-            )
+        print("TITLE:", page.title())
 
-            print("[2] HTTP 상태:", response.status if response else "없음")
+        page.screenshot(
+            path="lticket_test.png",
+            full_page=True
+        )
 
-            time.sleep(5)
+        with open(
+            "lticket_test.html",
+            "w",
+            encoding="utf-8"
+        ) as f:
+            f.write(page.content())
 
-            print("[3] 현재 URL:")
-            print(page.url)
+        print("SUCCESS")
 
-            print("[4] 페이지 제목:")
-            print(page.title())
+    except Exception as e:
 
-            # 화면 저장
-            page.screenshot(
-                path="lticket_debug.png",
-                full_page=True
-            )
+        print("PLAYWRIGHT ERROR:")
+        print(repr(e))
 
-            # HTML 일부 저장
-            html = page.content()
+    finally:
 
-            with open(
-                "lticket_debug.html",
-                "w",
-                encoding="utf-8"
-            ) as f:
-                f.write(html)
-
-            print("[5] 페이지 저장 완료")
-
-            print("[6] HTML 길이:", len(html))
-
-        except Exception as e:
-
-            print("[오류]", repr(e))
-
-            try:
-                page.screenshot(
-                    path="lticket_error.png",
-                    full_page=True
-                )
-            except:
-                pass
-
-        finally:
-
-            browser.close()
-
-
-if __name__ == "__main__":
-    test_lticket()
+        browser.close()
